@@ -62,7 +62,7 @@ export default function Home() {
     setCurrency(prev => prev === 'USD' ? 'LAVA' : 'USD');
   };
 
-  const formatLastUpdate = (date) => {
+  const formatLastUpdate = (date: any) => {
     const diff = Math.floor((new Date() - date) / 60000);
     return `Last update ${diff} minute${diff !== 1 ? 's' : ''} ago`;
   };

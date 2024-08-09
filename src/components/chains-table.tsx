@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/pagination";
 
 const ChainsTable = () => {
-  const [chains, setChains] = useState([]);
+  const [chains, setChains] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/pagination";
 
 const ProvidersTable = () => {
-  const [providers, setProviders] = useState([]);
+  const [providers, setProviders] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -88,7 +88,7 @@ const ProvidersTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {providers.map((provider, index) => (
+          {providers.map((provider: any, index) => (
             <TableRow key={index}>
               <TableCell>{provider.moniker}</TableCell>
               <TableCell>{provider.totalServices}</TableCell>
