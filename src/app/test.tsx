@@ -15,11 +15,9 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
@@ -32,14 +30,6 @@ import {
 } from "@/components/ui/table"
 import { UsageGraph } from "@/components/usage-graph"
 import { Toggle } from "@/components/ui/toggle"
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
-
 export default function Home() {
   return (
     <div className="flex min-h-screen mx-auto max-w-screen-2xl flex-col">
@@ -58,12 +48,6 @@ export default function Home() {
             className="text-foreground transition-colors hover:text-foreground"
           >
             Dashboard
-          </Link>
-          <Link
-            href="#"
-            className="text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Pools
           </Link>
           <Link
             href="#"
@@ -212,117 +196,6 @@ export default function Home() {
         </div>
 
         <UsageGraph />
-
-
-        <div className="grid gap-4 md:gap-8">
-          <Card
-            className="xl:col-span-2" x-chunk="dashboard-01-chunk-4"
-          >
-            <CardHeader className="flex flex-row items-center">
-              <div className="grid gap-2">
-                <CardTitle>Incentive Pools</CardTitle>
-                <CardDescription>
-                  Recent transactions from your store.
-                </CardDescription>
-              </div>
-              <Button asChild size="sm" className="ml-auto gap-1">
-                <Link href="#">
-                  View All
-                  <ArrowUpRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </CardHeader>
-
-            <CardContent>
-              <Carousel>
-                <CarouselContent>
-                  <CarouselItem className="basis-1/4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardDescription>August 2024</CardDescription>
-                        <CardTitle className="text-4xl">$1,329</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-xs text-muted-foreground">25 participating providers</div>
-                      </CardContent>
-                      <CardFooter>
-                        <Progress value={50} aria-label="25 participating providers" />
-                      </CardFooter>
-                    </Card>
-                  </CarouselItem>
-
-                  <CarouselItem className="basis-1/4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardDescription>August 2024</CardDescription>
-                        <CardTitle className="text-4xl">$1,329</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-xs text-muted-foreground">25 participating providers</div>
-                      </CardContent>
-                      <CardFooter>
-                        <Progress value={50} aria-label="25 participating providers" />
-                      </CardFooter>
-                    </Card>
-                  </CarouselItem>
-
-
-                  <CarouselItem className="basis-1/4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardDescription>August 2024</CardDescription>
-                        <CardTitle className="text-4xl">$1,329</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-xs text-muted-foreground">25 participating providers</div>
-                      </CardContent>
-                      <CardFooter>
-                        <Progress value={50} aria-label="25 participating providers" />
-                      </CardFooter>
-                    </Card>
-                  </CarouselItem>
-
-                  <CarouselItem className="basis-1/4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardDescription>August 2024</CardDescription>
-                        <CardTitle className="text-4xl">$1,329</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-xs text-muted-foreground">25 participating providers</div>
-                      </CardContent>
-                      <CardFooter>
-                        <Progress value={50} aria-label="25 participating providers" />
-                      </CardFooter>
-                    </Card>
-                  </CarouselItem>
-
-                  <CarouselItem className="basis-1/4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardDescription>August 2024</CardDescription>
-                        <CardTitle className="text-4xl">$1,329</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-xs text-muted-foreground">25 participating providers</div>
-                      </CardContent>
-                      <CardFooter>
-                        <Progress value={50} aria-label="25 participating providers" />
-                      </CardFooter>
-                    </Card>
-                  </CarouselItem>
-
-
-                </CarouselContent>
-
-                <CarouselPrevious />
-                <CarouselNext />
-              </Carousel>
-
-            </CardContent>
-          </Card>
-        </div>
-
 
         <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-4">
           <Card
