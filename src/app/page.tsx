@@ -63,7 +63,7 @@ export default function Home() {
   };
 
   const formatLastUpdate = (date: any) => {
-    const diff = Math.floor((new Date() - date) / 60000);
+    const diff = Math.floor((new Date() as any - date) / 60000);
     return `Last update ${diff} minute${diff !== 1 ? 's' : ''} ago`;
   };
 
