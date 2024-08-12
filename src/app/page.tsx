@@ -161,8 +161,7 @@ export default function Home() {
           </SheetContent>
         </Sheet>
         <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-          <Badge variant="outline">Last update 5 minutes ago</Badge>
-
+          <Badge variant="outline">{formatLastUpdate(lastUpdate)}</Badge>
           <form className="ml-auto flex-1 sm:flex-initial">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -173,22 +172,14 @@ export default function Home() {
               />
             </div>
           </form>
-
-
-          <Toggle variant="outline" aria-label="Toggle italic">
-            <DollarSign className="h-4 w-4" />
-          </Toggle>
-
+          <div className="flex justify-between items-center">
+            <Toggle variant="outline" aria-label="Toggle currency" pressed={currency === 'LAVA'} onPressedChange={toggleCurrency}>
+              {currency === 'USD' ? <DollarSign className="h-4 w-4" /> : 'LAVA'}
+            </Toggle>
+          </div>
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="flex justify-between items-center">
-          <Badge variant="outline">{formatLastUpdate(lastUpdate)}</Badge>
-          <Toggle variant="outline" aria-label="Toggle currency" pressed={currency === 'LAVA'} onPressedChange={toggleCurrency}>
-            {currency === 'USD' ? <DollarSign className="h-4 w-4" /> : 'LAVA'}
-          </Toggle>
-        </div>
-
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
           <Card x-chunk="dashboard-01-chunk-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Pagination,
   PaginationContent,
@@ -13,26 +13,37 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-const ProvidersTable = () => {
-  const [providers, setProviders] = useState<any[]>([]);
+interface HealthData {
+  id: string;
+  timestamp: string;
+  spec: string;
+  interface: string;
+  status: string;
+  message: string;
+  provider: string;
+  region: string;
+}
+
+export const ProviderHealthTable = ({ providerId }: { providerId: string }) => {
+  const [healthData, setHealthData] = useState<HealthData[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    fetchProviders();
-  }, [currentPage]);
+    fetchHealthData();
+  }, [currentPage, providerId]);
 
-  const fetchProviders = async () => {
+  const fetchHealthData = async () => {
     try {
-      const response = await fetch(`https://jsinfo.lavanet.xyz/indexProviders?pagination=totalStake,d,${currentPage},20`);
+      const response = await fetch(`https://jsinfo.lavanet.xyz/providerHealth/${providerId}?pagination=timestamp,d,${currentPage},20`);
       const data = await response.json();
-      setProviders(data.data);
-
-      const countResponse = await fetch('https://jsinfo.lavanet.xyz/item-count/indexProviders');
+      setHealthData(data.data);
+      
+      const countResponse = await fetch(`https://jsinfo.lavanet.xyz/item-count/providerHealth/${providerId}`);
       const countData = await countResponse.json();
       setTotalPages(Math.ceil(countData.itemCount / 20));
     } catch (error) {
-      console.error('Error fetching providers:', error);
+      console.error('Error fetching provider health data:', error);
     }
   };
 
@@ -76,24 +87,43 @@ const ProvidersTable = () => {
     return items;
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+        return 'bg-green-500';
+      case 'unhealthy':
+        return 'bg-red-500';
+      case 'jailed':
+        return 'bg-yellow-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
   return (
     <>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Moniker</TableHead>
-            <TableHead>Total Services</TableHead>
-            <TableHead>Total Stake</TableHead>
+            <TableHead>Spec</TableHead>
+            <TableHead>Interface</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Message</TableHead>
+            <TableHead>Region</TableHead>
+            <TableHead>Timestamp</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {providers.map((provider: any, index) => (
-            <TableRow key={index}>
-              <Link href={`/provider/${provider.provider}`}>
-                <TableCell>{provider.moniker}</TableCell>
-              </Link>
-              <TableCell>{provider.totalServices}</TableCell>
-              <TableCell>{Number(provider.totalStake).toLocaleString()}</TableCell>
+          {healthData.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell>{item.spec}</TableCell>
+              <TableCell>{item.interface}</TableCell>
+              <TableCell>
+                <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
+              </TableCell>
+              <TableCell>{item.message}</TableCell>
+              <TableCell>{item.region}</TableCell>
+              <TableCell>{new Date(item.timestamp).toLocaleString()}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -125,4 +155,4 @@ const ProvidersTable = () => {
   );
 };
 
-export default ProvidersTable;
+export default ProviderHealthTable;

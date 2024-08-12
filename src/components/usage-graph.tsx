@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import useSWR from 'swr';
-import { format, addDays, isBefore, startOfDay } from "date-fns";
-import { CalendarIcon } from "@radix-ui/react-icons";
+import { format, addDays } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import {
   Area, Line, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Brush,
@@ -29,7 +29,7 @@ import UsageGraphSkeleton from "./usage-graph-skeleton";
 
 const fetcher = (url: string | URL | Request) => fetch(url).then((res) => res.json());
 
-export function UsageGraph() {
+export function UsageGraph({ providerId = null }) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -90),
     to: new Date(),
@@ -41,7 +41,9 @@ export function UsageGraph() {
     if (dateRange?.from && dateRange?.to) {
       const fromDate = format(dateRange.from, "yyyy-MM-dd'Z'");
       const toDate = format(dateRange.to, "yyyy-MM-dd'Z'");
-      return `https://jsinfo.lavanet.xyz/indexCharts?f=${fromDate}&t=${toDate}`;
+      return providerId
+        ? `https://jsinfo.lavanet.xyz/providerCharts/${providerId}?f=${fromDate}&t=${toDate}`
+        : `https://jsinfo.lavanet.xyz/indexCharts?f=${fromDate}&t=${toDate}`;
     }
     return null;
   }, fetcher, {
@@ -63,8 +65,10 @@ export function UsageGraph() {
     const allChains = new Set<string>()
     sortedData.forEach((day) => {
       if (Array.isArray(day.data)) {
-        day.data.forEach((chain: { chainId: string; }) => {
-          if (chain.chainId && chain.chainId !== "All Chains") {
+        day.data.forEach((chain: { specId: string | undefined; chainId: string | undefined; }) => {
+          if (chain.specId && chain.specId !== "All Chains") {
+            allChains.add(chain.specId)
+          } else if (chain.chainId && chain.chainId !== "All Specs") {
             allChains.add(chain.chainId)
           }
         })
@@ -77,11 +81,17 @@ export function UsageGraph() {
       const dayData: { [key: string]: any } = {
         date: day.date,
         qos: day.qos,
+        qosSyncAvg: day.qosSyncAvg,
+        qosAvailabilityAvg: day.qosAvailabilityAvg,
+        qosLatencyAvg: day.qosLatencyAvg,
         totalRelays: 0,
       }
       if (Array.isArray(day.data)) {
-        day.data.forEach((chain: { chainId: string; relaySum: number; }) => {
-          if (chain.chainId && chain.chainId !== "All Chains") {
+        day.data.forEach((chain: { specId: string | undefined; chainId: string | undefined; relaySum: number | undefined; relays: number | undefined; }) => {
+          if (chain.specId && chain.specId !== "All Specs") {
+            dayData[chain.specId] = chain.relays || 0
+            dayData.totalRelays += chain.relays || 0
+          } else if (chain.chainId && chain.chainId !== "All Specs") {
             dayData[chain.chainId] = chain.relaySum || 0
             dayData.totalRelays += chain.relaySum || 0
           }
@@ -90,12 +100,16 @@ export function UsageGraph() {
       return dayData
     })
 
-    const chartConfig: { [key: string]: { label: string; color: string } } = {
-      qos: {
-        label: "QoS Score",
-        color: "hsl(var(--primary))",
-      },
-    }
+    const chartConfig = providerId
+      ? {
+        qosSyncAvg: { label: "QoS Sync Score", color: "hsl(var(--primary))" },
+        qosAvailabilityAvg: { label: "QoS Availability Score", color: "hsl(var(--secondary))" },
+        qosLatencyAvg: { label: "QoS Latency Score", color: "hsl(var(--accent))" },
+      }
+      : {
+        qos: { label: "QoS Score", color: "url(#qosGradient)" },
+      };
+
     const colors = [
       "hsl(var(--chart-1))",
       "hsl(var(--chart-2))",
@@ -109,15 +123,14 @@ export function UsageGraph() {
         label: chain,
         color: colors[index % colors.length],
       }
-    })
-
+    });
 
     return { chartData, chartConfig }
-  }, [data, selectedChains]);
+  }, [data, selectedChains, providerId]);
 
   useEffect(() => {
     if (availableChains.length > 0 && selectedChains.length === 0) {
-      setSelectedChains(availableChains.slice(0, 10));
+      setSelectedChains(availableChains.slice(0, 5));
     }
   }, [availableChains, selectedChains]);
 
@@ -127,12 +140,11 @@ export function UsageGraph() {
     });
   }, [chartConfig]);
 
-  const handleSelectionChange = (newSelection: React.SetStateAction<string[]>) => {
+  const handleSelectionChange = (newSelection) => {
     setSelectedChains(newSelection);
   };
 
-
-  const handleDateRangeSelect = (range: DateRange | undefined) => {
+  const handleDateRangeSelect = (range) => {
     setTempDateRange(range);
   };
 
@@ -148,25 +160,32 @@ export function UsageGraph() {
 
   const disabledDays = { after: new Date() };
 
-  const getQoSColor = (score: number) => {
-    if (score >= 0.99) return '#00ff00'; // Green for very good scores
-    if (score >= 0.97) return '#ffff00'; // Yellow for okay scores
-    return '#ff0000'; // Red for bad scores
+  const getQoSColor = (score) => {
+    if (score >= 0.99) return '#00ff00';
+    if (score >= 0.97) return '#ffff00';
+    return '#ff0000';
   };
 
-  const CustomTooltip = ({ active, payload, label }: { active: boolean, payload: any[], label: string }) => {
+  const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const qosScore = payload.find(p => p.dataKey === 'qos')?.value;
       return (
         <Card className="p-2">
           <CardHeader className="p-2">
             <CardTitle className="text-sm">{new Date(label).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</CardTitle>
           </CardHeader>
           <CardContent className="p-2">
-            <p className="font-semibold text-sm">
-              <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: getQoSColor(qosScore) }}></span>
-              QoS Score: {qosScore?.toFixed(4)}
-            </p>
+            {providerId ? (
+              <>
+                <p className="text-sm">QoS Sync Score: {payload.find(p => p.dataKey === 'qosSyncAvg')?.value?.toFixed(4)}</p>
+                <p className="text-sm">QoS Availability Score: {payload.find(p => p.dataKey === 'qosAvailabilityAvg')?.value?.toFixed(4)}</p>
+                <p className="text-sm">QoS Latency Score: {payload.find(p => p.dataKey === 'qosLatencyAvg')?.value?.toFixed(4)}</p>
+              </>
+            ) : (
+              <p className="font-semibold text-sm">
+                <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: getQoSColor(payload.find(p => p.dataKey === 'qos')?.value) }}></span>
+                QoS Score: {payload.find(p => p.dataKey === 'qos')?.value?.toFixed(4)}
+              </p>
+            )}
             {selectedChains.map((chain) => (
               <p key={chain} className="text-sm">
                 <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: chartConfig[chain]?.color }}></span>
@@ -176,7 +195,6 @@ export function UsageGraph() {
             <p className="font-semibold text-sm mt-2">
               Total Relays: <span className="font-mono">{payload.find(p => p.dataKey === selectedChains[0])?.payload?.totalRelays?.toLocaleString().padStart(10)}</span>
             </p>
-
           </CardContent>
         </Card>
       )
@@ -184,11 +202,11 @@ export function UsageGraph() {
     return null
   }
 
-  const renderLegend = (props: any) => {
+  const renderLegend = (props) => {
     const { payload } = props;
     return (
       <div className="flex flex-wrap justify-center gap-4 text-sm">
-        {payload.map((entry: { color: any; value: any }, index: any) => (
+        {payload.map((entry, index) => (
           <div key={`item-${index}`} className="flex items-center">
             <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: entry.color }}></span>
             <span>{entry.value}</span>
@@ -205,15 +223,15 @@ export function UsageGraph() {
     <Card>
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-2 space-y-0 pb-4 sm:pb-2">
         <div className="space-y-1">
-          <CardTitle>QoS Score and Selected Chains</CardTitle>
+          <CardTitle>{providerId ? 'Provider QoS Scores and Relays' : 'QoS Score and Selected Chains'}</CardTitle>
           <CardDescription>
-            Showing QoS score and relay counts for selected chains
+            {providerId ? 'Showing QoS scores and relay counts for the selected provider' : 'Showing QoS score and relay counts for selected chains'}
           </CardDescription>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:ml-auto">
           <CustomCombobox
-            availableChains={availableChains || []}
-            selectedChains={selectedChains || []}
+            availableChains={availableChains}
+            selectedChains={selectedChains}
             onSelectionChange={handleSelectionChange}
           />
           <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
@@ -275,11 +293,13 @@ export function UsageGraph() {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <defs>
-                  <linearGradient id="qosGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00ff00" stopOpacity={0.8} />
-                    <stop offset="50%" stopColor="#ffff00" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#ff0000" stopOpacity={0.8} />
-                  </linearGradient>
+                  {providerId && (
+                    <linearGradient id="qosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00ff00" stopOpacity={0.8} />
+                      <stop offset="50%" stopColor="#ffff00" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#ff0000" stopOpacity={0.8} />
+                    </linearGradient>)
+                  }
                   {Object.entries(chartConfig).map(([key, value]) => (
                     <linearGradient key={key} id={`fill${key}`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={`var(--${key}-color)`} stopOpacity={0.8} />
@@ -305,16 +325,45 @@ export function UsageGraph() {
                 />
                 <YAxis yAxisId="left" orientation="left" tick={true} className="text-muted-foreground text-xs" />
                 <YAxis yAxisId="right" orientation="right" tick={true} domain={[0, 1]} className="text-muted-foreground text-xs" />
-                <Tooltip content={<CustomTooltip active={false} payload={[]} label={""} />} />
+                <Tooltip content={<CustomTooltip />} />
                 <Legend content={renderLegend} />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="qos"
-                  stroke="url(#qosGradient)"
-                  strokeWidth={2}
-                  dot={false}
-                />
+                {providerId ? (
+                  <>
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="qosSyncAvg"
+                      stroke={chartConfig.qosSyncAvg.color}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="qosAvailabilityAvg"
+                      stroke={chartConfig.qosAvailabilityAvg.color}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="qosLatencyAvg"
+                      stroke={chartConfig.qosLatencyAvg.color}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </>
+                ) : (
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="qos"
+                    stroke="url(#qosGradient)"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                )}
                 {selectedChains.map((chain) => (
                   <Area
                     key={chain}
@@ -362,3 +411,4 @@ export function UsageGraph() {
     </Card>
   );
 }
+
