@@ -3,6 +3,8 @@ import { Inter as FontSans } from "next/font/google"
 import "./globals.css";
 import { cn } from "@/lib/utils"
 import { ThemeProvider } from "@/components/theme-provider"
+import Header from "@/components/header"
+import Footer from "@/components/footer"
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -31,7 +33,13 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="dark"
         >
-          {children}
+          <div className="flex min-h-screen mx-auto max-w-screen-2xl flex-col">
+            <Header />
+            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+              {children}
+            </main>
+            <Footer />
+          </div>
         </ThemeProvider>
       </body>
     </html>
