@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import useSWR from 'swr';
 import { format, addDays } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon } from "@radix-ui/react-icons";
 import { DateRange } from "react-day-picker";
 import {
   Area, Line, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Brush,
@@ -36,6 +36,12 @@ export function UsageGraph({ providerId = null }) {
   });
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
+  const [visibleLines, setVisibleLines] = useState({
+    qos: true,
+    qosSyncAvg: true,
+    qosAvailabilityAvg: true,
+    qosLatencyAvg: true,
+  });
 
   const { data, error, isValidating } = useSWR(() => {
     if (dateRange?.from && dateRange?.to) {
@@ -54,6 +60,13 @@ export function UsageGraph({ providerId = null }) {
 
   const [availableChains, setAvailableChains] = useState<string[]>([]);
   const [selectedChains, setSelectedChains] = useState<string[]>([]);
+
+  const qosColors = {
+    qos: { start: "#00ff00", end: "#ff0000" },
+    qosSyncAvg: { start: "#00ffff", end: "#0000ff" },
+    qosAvailabilityAvg: { start: "#00ff00", end: "#ff0000" },
+    qosLatencyAvg: { start: "#ff00ff", end: "#800080" },
+  };
 
   const { chartData, chartConfig } = useMemo(() => {
     if (!data || !data.data) {
@@ -100,14 +113,14 @@ export function UsageGraph({ providerId = null }) {
       return dayData
     })
 
-    const chartConfig = providerId
+    const chartConfig: { [key: string]: { label: string; color: string } } = providerId
       ? {
-        qosSyncAvg: { label: "QoS Sync Score", color: "hsl(var(--primary))" },
-        qosAvailabilityAvg: { label: "QoS Availability Score", color: "hsl(var(--secondary))" },
-        qosLatencyAvg: { label: "QoS Latency Score", color: "hsl(var(--accent))" },
+        qosSyncAvg: { label: "QoS Sync Score", color: qosColors.qosSyncAvg.start },
+        qosAvailabilityAvg: { label: "QoS Availability Score", color: qosColors.qosAvailabilityAvg.start },
+        qosLatencyAvg: { label: "QoS Latency Score", color: qosColors.qosLatencyAvg.start },
       }
       : {
-        qos: { label: "QoS Score", color: "url(#qosGradient)" },
+        qos: { label: "QoS Score", color: qosColors.qos.start },
       };
 
     const colors = [
@@ -128,6 +141,10 @@ export function UsageGraph({ providerId = null }) {
     return { chartData, chartConfig }
   }, [data, selectedChains, providerId]);
 
+  const toggleLineVisibility = (dataKey: string) => {
+    setVisibleLines(prev => ({ ...prev, [dataKey]: !prev[dataKey] }));
+  };
+
   useEffect(() => {
     if (availableChains.length > 0 && selectedChains.length === 0) {
       setSelectedChains(availableChains.slice(0, 5));
@@ -140,11 +157,11 @@ export function UsageGraph({ providerId = null }) {
     });
   }, [chartConfig]);
 
-  const handleSelectionChange = (newSelection) => {
+  const handleSelectionChange = (newSelection: React.SetStateAction<string[]>) => {
     setSelectedChains(newSelection);
   };
 
-  const handleDateRangeSelect = (range) => {
+  const handleDateRangeSelect = (range: DateRange | undefined) => {
     setTempDateRange(range);
   };
 
@@ -160,14 +177,16 @@ export function UsageGraph({ providerId = null }) {
 
   const disabledDays = { after: new Date() };
 
-  const getQoSColor = (score) => {
+  const getQoSColor = (score: number) => {
     if (score >= 0.99) return '#00ff00';
     if (score >= 0.97) return '#ffff00';
     return '#ff0000';
   };
 
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload, label }: { active: boolean, payload: any[], label: string }) => {
     if (active && payload && payload.length) {
+      const qosScore = payload.find(p => p.dataKey === 'qos')?.value;
+
       return (
         <Card className="p-2">
           <CardHeader className="p-2">
@@ -182,9 +201,10 @@ export function UsageGraph({ providerId = null }) {
               </>
             ) : (
               <p className="font-semibold text-sm">
-                <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: getQoSColor(payload.find(p => p.dataKey === 'qos')?.value) }}></span>
-                QoS Score: {payload.find(p => p.dataKey === 'qos')?.value?.toFixed(4)}
+                <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: getQoSColor(qosScore) }}></span>
+                QoS Score: {qosScore?.toFixed(4)}
               </p>
+
             )}
             {selectedChains.map((chain) => (
               <p key={chain} className="text-sm">
@@ -202,16 +222,31 @@ export function UsageGraph({ providerId = null }) {
     return null
   }
 
-  const renderLegend = (props) => {
+  const renderLegend = (props: any) => {
     const { payload } = props;
     return (
       <div className="flex flex-wrap justify-center gap-4 text-sm">
-        {payload.map((entry, index) => (
-          <div key={`item-${index}`} className="flex items-center">
-            <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: entry.color }}></span>
-            <span>{entry.value}</span>
-          </div>
-        ))}
+        {payload.map((entry: { color: any; value: any; dataKey: string }, index: any) => {
+          const isQoSMetric = entry.dataKey.startsWith('qos');
+          return (
+            <div
+              key={`item-${index}`}
+              className={`flex items-center ${isQoSMetric ? 'cursor-pointer' : ''}`}
+              onClick={() => isQoSMetric && toggleLineVisibility(entry.dataKey)}
+            >
+              <span
+                className="inline-block w-3 h-3 rounded-full mr-2"
+                style={{
+                  backgroundColor: qosColors[entry.dataKey]?.start || entry.color,
+                  opacity: isQoSMetric && !visibleLines[entry.dataKey] ? 0.3 : 1
+                }}
+              ></span>
+              <span style={{ opacity: isQoSMetric && !visibleLines[entry.dataKey] ? 0.3 : 1 }}>
+                {entry.value}
+              </span>
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -230,8 +265,8 @@ export function UsageGraph({ providerId = null }) {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:ml-auto">
           <CustomCombobox
-            availableChains={availableChains}
-            selectedChains={selectedChains}
+            availableChains={availableChains || []}
+            selectedChains={selectedChains || []}
             onSelectionChange={handleSelectionChange}
           />
           <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
@@ -293,13 +328,12 @@ export function UsageGraph({ providerId = null }) {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <defs>
-                  {providerId && (
-                    <linearGradient id="qosGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00ff00" stopOpacity={0.8} />
-                      <stop offset="50%" stopColor="#ffff00" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#ff0000" stopOpacity={0.8} />
-                    </linearGradient>)
-                  }
+                  {Object.entries(qosColors).map(([key, { start, end }]) => (
+                    <linearGradient key={key} id={`${key}Gradient`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={start} stopOpacity={0.8} />
+                      <stop offset="95%" stopColor={end} stopOpacity={0.8} />
+                    </linearGradient>
+                  ))}
                   {Object.entries(chartConfig).map(([key, value]) => (
                     <linearGradient key={key} id={`fill${key}`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={`var(--${key}-color)`} stopOpacity={0.8} />
@@ -325,7 +359,7 @@ export function UsageGraph({ providerId = null }) {
                 />
                 <YAxis yAxisId="left" orientation="left" tick={true} className="text-muted-foreground text-xs" />
                 <YAxis yAxisId="right" orientation="right" tick={true} domain={[0, 1]} className="text-muted-foreground text-xs" />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip active={false} payload={[]} label={""} />} />
                 <Legend content={renderLegend} />
                 {providerId ? (
                   <>
@@ -333,25 +367,31 @@ export function UsageGraph({ providerId = null }) {
                       yAxisId="right"
                       type="monotone"
                       dataKey="qosSyncAvg"
-                      stroke={chartConfig.qosSyncAvg.color}
+                      name="QoS Sync Score"
+                      stroke="url(#qosSyncAvgGradient)"
                       strokeWidth={2}
                       dot={false}
+                      hide={!visibleLines.qosSyncAvg}
                     />
                     <Line
                       yAxisId="right"
                       type="monotone"
                       dataKey="qosAvailabilityAvg"
-                      stroke={chartConfig.qosAvailabilityAvg.color}
+                      name="QoS Availability Score"
+                      stroke="url(#qosAvailabilityAvgGradient)"
                       strokeWidth={2}
                       dot={false}
+                      hide={!visibleLines.qosAvailabilityAvg}
                     />
                     <Line
                       yAxisId="right"
                       type="monotone"
                       dataKey="qosLatencyAvg"
-                      stroke={chartConfig.qosLatencyAvg.color}
+                      name="QoS Latency Score"
+                      stroke="url(#qosLatencyAvgGradient)"
                       strokeWidth={2}
                       dot={false}
+                      hide={!visibleLines.qosLatencyAvg}
                     />
                   </>
                 ) : (
@@ -359,11 +399,14 @@ export function UsageGraph({ providerId = null }) {
                     yAxisId="right"
                     type="monotone"
                     dataKey="qos"
+                    name="QoS Score"
                     stroke="url(#qosGradient)"
                     strokeWidth={2}
                     dot={false}
+                    hide={!visibleLines.qos}
                   />
                 )}
+
                 {selectedChains.map((chain) => (
                   <Area
                     key={chain}
