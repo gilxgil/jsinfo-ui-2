@@ -12,7 +12,7 @@ const ProviderPage = ({ address }: { address: string }) => {
   const [providerData, setProviderData] = useState(null);
   const [providerCards, setProviderCards] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (address) {
